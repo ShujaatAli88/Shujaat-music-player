@@ -1,0 +1,4 @@
+spotipy
+treamlit
+python-dotenv
+flask

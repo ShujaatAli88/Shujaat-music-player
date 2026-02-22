@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MusicFlow | Singer Search</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: #0f172a; color: white; }
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .song-card:hover { transform: translateY(-5px); transition: all 0.3s ease; }
+    </style>
+</head>
+<body class="min-h-screen pb-20">
+
+    <div class="container mx-auto px-4 py-10">
+        <div class="text-center mb-12">
+            <h1 class="text-5xl font-extrabold mb-4 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+                Singer Deep Search
+            </h1>
+            <p class="text-gray-400">Search for any singer to see their songs and play previews</p>
+        </div>
+
+        <div class="max-w-2xl mx-auto mb-16 flex gap-2">
+            <input type="text" id="artistInput" placeholder="Enter singer name (e.g. Arijit Singh)..." 
+                   class="w-full p-4 rounded-xl glass focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg">
+            <button onclick="performSearch()" class="bg-blue-600 hover:bg-blue-500 px-8 py-4 rounded-xl font-bold transition">
+                Search
+            </button>
+        </div>
+
+        <div id="loader" class="hidden text-center text-2xl animate-pulse">Fetching songs...</div>
+
+        <div id="resultsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            </div>
+    </div>
+
+    <div id="playerBar" class="fixed bottom-0 left-0 right-0 glass p-4 hidden border-t border-white/10">
+        <div class="container mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <img id="playerImg" src="" class="w-12 h-12 rounded shadow-lg">
+                <div>
+                    <p id="playerTitle" class="font-bold truncate w-48"></p>
+                    <p id="playerArtist" class="text-sm text-gray-400"></p>
+                </div>
+            </div>
+            <audio id="audioElement" controls class="w-full max-w-xl mx-4"></audio>
+            <button onclick="closePlayer()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+    </div>
+
+    <script>
+        async function performSearch() {
+            const artist = document.getElementById('artistInput').value;
+            const grid = document.getElementById('resultsGrid');
+            const loader = document.getElementById('loader');
+
+            if(!artist) return;
+
+            loader.classList.remove('hidden');
+            grid.innerHTML = '';
+
+            try {
+                const response = await fetch(`/search?artist=${encodeURIComponent(artist)}`);
+                const data = await response.json();
+                
+                loader.classList.add('hidden');
+
+                if(data.results.length === 0) {
+                    grid.innerHTML = '<p class="col-span-full text-center text-gray-500">No songs found.</p>';
+                    return;
+                }
+
+                data.results.forEach(song => {
+                    const card = `
+                        <div class="glass p-4 rounded-2xl song-card group relative">
+                            <img src="${song.artworkUrl100.replace('100x100', '400x400')}" class="w-full aspect-square object-cover rounded-xl mb-4 shadow-xl">
+                            <h3 class="font-bold text-lg truncate">${song.trackName}</h3>
+                            <p class="text-gray-400 text-sm mb-4">${song.collectionName || 'Single'}</p>
+                            
+                            <button onclick="playSong('${song.previewUrl}', '${song.trackName}', '${song.artistName}', '${song.artworkUrl100}')" 
+                                    class="w-full bg-white text-black py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-400 transition">
+                                <i class="fa-solid fa-play"></i> Play Preview
+                            </button>
+                        </div>
+                    `;
+                    grid.innerHTML += card;
+                });
+            } catch (error) {
+                loader.innerText = "Error fetching data.";
+            }
+        }
+
+        function playSong(url, title, artist, img) {
+            const playerBar = document.getElementById('playerBar');
+            const audio = document.getElementById('audioElement');
+            
+            document.getElementById('playerImg').src = img;
+            document.getElementById('playerTitle').innerText = title;
+            document.getElementById('playerArtist').innerText = artist;
+            
+            audio.src = url;
+            playerBar.classList.remove('hidden');
+            audio.play();
+        }
+
+        function closePlayer() {
+            const audio = document.getElementById('audioElement');
+            audio.pause();
+            document.getElementById('playerBar').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
