@@ -1,38 +1,31 @@
 from flask import Flask, render_template, request, jsonify
 import requests
 import os
+from upstash_redis import Redis
+from dotenv import load_dotenv
+
+# 1. Load the keys from your .env file
+load_dotenv()
 
 app = Flask(__name__)
 
-# Mock database for local testing (Vercel KV would replace this in production)
-# In production, you'd use: from vercel_kv import kv
-VISITS_FILE = "visits.txt"
-
-def get_and_increment_count():
-    try:
-        if not os.path.exists(VISITS_FILE):
-            with open(VISITS_FILE, "w") as f: f.write("0")
-        
-        with open(VISITS_FILE, "r+") as f:
-            count = int(f.read()) + 1
-            f.seek(0)
-            f.write(str(count))
-            f.truncate()
-            return count
-    except:
-        return "Error"
+# 2. Connect to Redis (it will now find the keys in your .env)
+redis = Redis.from_env()
 
 @app.route('/')
 def index():
-    # Secretly increment the count every time the page is loaded
-    current_count = get_and_increment_count()
-    
-    seo_data = {
-        "title": "MusicFlow | Premium Singer Search & Discovery",
-        "description": "The most advanced engine to find and play your favorite songs instantly.",
-        "keywords": "MusicFlow, song search, MP3 download, Shujaat music"
+    try:
+        # Increment global visits
+        redis.incr('total_visits')
+    except Exception as e:
+        print(f"Redis Error: {e}")
+
+    seo = {
+        "title": "MusicFlow | Search",
+        "description": "Premium Search Engine",
+        "keywords": "music, shujaat"
     }
-    return render_template('index.html', seo=seo_data)
+    return render_template('index.html', seo=seo)
 
 @app.route('/search')
 def search():
@@ -41,23 +34,15 @@ def search():
         return jsonify({"results": []})
 
     url = "https://itunes.apple.com/search"
-    params = {
-        "term": artist_name,
-        "entity": "song",
-        "limit": 100, # Increased limit for better UX
-        "country": "IN"
-    }
-    
+    params = {"term": artist_name, "entity": "song", "limit": 50}
     response = requests.get(url, params=params)
-    if response.status_code == 200:
-        return response.json()
-    return jsonify({"error": "External API Error"}), 500
+    return jsonify(response.json())
 
-@app.route('/admin_data')
+@app.route('/visits')
 def admin_data():
-    # Only called by your secret trigger
-    with open(VISITS_FILE, "r") as f:
-        return jsonify({"count": f.read()})
+    # Fetch count from Upstash
+    count = redis.get('total_visits') or 0
+    return jsonify({"count": str(count)})
 
 if __name__ == '__main__':
-    app.run(debug=True,port=5000)
+    app.run(debug=True, port=5000)

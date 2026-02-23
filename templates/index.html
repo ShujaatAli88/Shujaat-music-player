@@ -68,9 +68,9 @@
         <div class="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <i class="fa-solid fa-chart-line text-blue-400"></i>
         </div>
-        <p class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-1">Internal Traffic</p>
+        <p class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-1">Global Traffic</p>
         <h2 id="visitCount" class="text-5xl font-black text-white">0</h2>
-        <p class="text-xs text-slate-400 mt-2">Total Visits Saved</p>
+        <p class="text-xs text-slate-400 mt-2">Visits Persistent in Cloud</p>
         <button onclick="document.getElementById('adminModal').style.display='none'" class="mt-6 px-6 py-2 bg-white/5 hover:bg-white/10 rounded-full text-[10px] font-bold transition">CLOSE</button>
     </div>
 
@@ -146,7 +146,7 @@
 
     <footer class="py-16 text-center opacity-30 hover:opacity-100 transition duration-700">
         <p class="text-[10px] font-bold tracking-[0.3em] uppercase">
-            Visits<span id="secretTrigger" onclick="handleSecretClick()" class="text-red-500 cursor-pointer hover:scale-150 transition inline-block"> ❤️Shujaat   </span><span class="text-blue-500"></span>
+            <span id="secretTrigger" onclick="handleSecretClick()" class="text-red-500 cursor-pointer hover:scale-150 transition inline-block">❤️ Shujaat</span>
         </p>
     </footer>
 
@@ -155,7 +155,7 @@
     <script>
         const audio = document.getElementById('mainAudio');
         
-        // --- SECRET COUNTER LOGIC ---
+        // --- UPDATED SECRET COUNTER LOGIC ---
         let clicks = 0;
         let lastClick = 0;
         function handleSecretClick() {
@@ -164,7 +164,8 @@
             else clicks = 1;
             lastClick = time;
 
-            if(clicks === 2) {
+            // Using 5 clicks for security
+            if(clicks === 5) {
                 fetch('/admin_data').then(r => r.json()).then(data => {
                     document.getElementById('visitCount').innerText = data.count;
                     document.getElementById('adminModal').style.display = 'block';
@@ -178,8 +179,10 @@
             const input = document.getElementById('artistInput').value;
             if(!input) return;
             document.getElementById('loader').classList.remove('hidden');
+            
             const res = await fetch(`/search?artist=${encodeURIComponent(input)}`);
             const data = await res.json();
+            
             document.getElementById('loader').classList.add('hidden');
             const grid = document.getElementById('resultsGrid');
             grid.innerHTML = '';
