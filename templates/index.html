@@ -2,114 +2,241 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MusicFlow | Singer Search</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <title>{{ seo.title }}</title>
+    <meta name="description" content="{{ seo.description }}">
+    <meta name="keywords" content="{{ seo.keywords }}">
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+
     <style>
-        body { background: #0f172a; color: white; }
-        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
-        .song-card:hover { transform: translateY(-5px); transition: all 0.3s ease; }
+        :root { --neon: #3b82f6; --glass: rgba(255, 255, 255, 0.03); }
+        body { 
+            background: #020617; color: #f8fafc; font-family: 'Plus Jakarta Sans', sans-serif;
+            background-image: radial-gradient(circle at 50% -20%, #1e1b4b, #020617);
+            background-attachment: fixed;
+        }
+
+        .glass { background: var(--glass); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); }
+        
+        .header-sticky {
+            position: sticky; top: 0; z-index: 90; transition: all 0.4s ease;
+            padding-top: 2rem; padding-bottom: 2rem;
+        }
+        
+        .scrolled .header-sticky {
+            background: rgba(2, 6, 23, 0.8); backdrop-filter: blur(15px);
+            padding-top: 1rem; padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .search-wrapper {
+            max-width: 600px; margin: 0 auto;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 100px; display: flex; align-items: center; padding: 4px 8px;
+            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .search-wrapper:focus-within {
+            background: rgba(255, 255, 255, 0.08); border-color: var(--neon);
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.2); transform: scale(1.02);
+        }
+
+        .song-card { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .song-card:hover {
+            transform: translateY(-8px); background: rgba(255,255,255,0.08);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+
+        #adminModal { 
+            display: none; position: fixed; top: 50%; left: 50%; 
+            transform: translate(-50%, -50%); z-index: 200; 
+            animation: popIn 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+        @keyframes popIn { from { scale: 0.5; opacity: 0; } to { scale: 1; opacity: 1; } }
+
+        .animate-spin-slow { animation: spin 10s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="min-h-screen pb-20">
+<body class="min-h-screen">
 
-    <div class="container mx-auto px-4 py-10">
-        <div class="text-center mb-12">
-            <h1 class="text-5xl font-extrabold mb-4 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                Singer Deep Search
-            </h1>
-            <p class="text-gray-400">Search for any singer to see their songs and play previews</p>
+    <div id="adminModal" class="glass p-8 rounded-[2.5rem] border-blue-500/50 shadow-2xl text-center min-w-[280px]">
+        <div class="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fa-solid fa-chart-line text-blue-400"></i>
         </div>
-
-        <div class="max-w-2xl mx-auto mb-16 flex gap-2">
-            <input type="text" id="artistInput" placeholder="Enter singer name (e.g. Arijit Singh)..." 
-                   class="w-full p-4 rounded-xl glass focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg">
-            <button onclick="performSearch()" class="bg-blue-600 hover:bg-blue-500 px-8 py-4 rounded-xl font-bold transition">
-                Search
-            </button>
-        </div>
-
-        <div id="loader" class="hidden text-center text-2xl animate-pulse">Fetching songs...</div>
-
-        <div id="resultsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            </div>
+        <p class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-1">Internal Traffic</p>
+        <h2 id="visitCount" class="text-5xl font-black text-white">0</h2>
+        <p class="text-xs text-slate-400 mt-2">Total Visits Saved</p>
+        <button onclick="document.getElementById('adminModal').style.display='none'" class="mt-6 px-6 py-2 bg-white/5 hover:bg-white/10 rounded-full text-[10px] font-bold transition">CLOSE</button>
     </div>
 
-    <div id="playerBar" class="fixed bottom-0 left-0 right-0 glass p-4 hidden border-t border-white/10">
-        <div class="container mx-auto flex items-center justify-between">
-            <div class="flex items-center gap-4">
-                <img id="playerImg" src="" class="w-12 h-12 rounded shadow-lg">
-                <div>
-                    <p id="playerTitle" class="font-bold truncate w-48"></p>
-                    <p id="playerArtist" class="text-sm text-gray-400"></p>
+    <nav class="header-sticky px-4">
+        <div class="container mx-auto">
+            <div class="text-center mb-6 logo-area">
+                <h1 class="text-4xl font-black tracking-tighter italic">
+                    MUSIC<span class="text-blue-500">FLOWByShu</span>
+                </h1>
+            </div>
+            
+            <div class="search-wrapper">
+                <i class="fa-solid fa-magnifying-glass ml-5 text-slate-500 text-sm"></i>
+                <input type="text" id="artistInput" 
+                       placeholder="Search Song Or Type Singer Name..." 
+                       class="w-full bg-transparent p-3 focus:outline-none text-sm font-medium placeholder-slate-600">
+                <button onclick="performSearch()" class="bg-blue-600 hover:bg-blue-500 px-6 py-2.5 rounded-full font-bold text-white text-xs uppercase tracking-wider transition-all">
+                    Search
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-12">
+        <div id="loader" class="hidden text-center py-20">
+            <div class="inline-block w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
+            <p class="mt-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Scanning Global Archives</p>
+        </div>
+
+        <div class="max-w-7xl mx-auto">
+            <div id="resultsGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"></div>
+        </div>
+    </main>
+
+    <div id="playerWrapper" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] transition-all duration-500">
+        <div id="minPlayer" onclick="togglePlayer(true)" class="hidden glass px-6 py-3 rounded-full cursor-pointer flex items-center gap-4 border-blue-500/40">
+            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span class="text-[10px] font-black uppercase tracking-widest text-blue-400">Live Preview</span>
+        </div>
+
+        <div id="maxPlayer" class="hidden glass p-6 rounded-[2.5rem] w-[90vw] max-w-sm shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex items-center gap-4">
+                    <img id="pImg" src="" class="w-12 h-12 rounded-xl animate-spin-slow object-cover">
+                    <div class="max-w-[140px]">
+                        <p id="pTitle" class="font-bold truncate text-xs"></p>
+                        <p id="pArtist" class="text-[9px] text-blue-400 font-bold uppercase"></p>
+                    </div>
+                </div>
+                <div class="flex gap-1">
+                    <button onclick="togglePlayer(false)" class="p-2 hover:bg-white/5 rounded-full"><i class="fa-solid fa-minus text-[10px]"></i></button>
+                    <button onclick="closePlayer()" class="p-2 hover:bg-red-500/10 text-red-400 rounded-full"><i class="fa-solid fa-xmark text-[10px]"></i></button>
                 </div>
             </div>
-            <audio id="audioElement" controls class="w-full max-w-xl mx-4"></audio>
-            <button onclick="closePlayer()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            
+            <div class="mb-4">
+                <div class="relative h-1 bg-white/10 rounded-full mb-2 overflow-hidden">
+                    <div id="pBar" class="h-full bg-blue-500 w-0 transition-all duration-300"></div>
+                </div>
+                <div class="flex justify-between text-[9px] font-mono text-slate-500">
+                    <span id="pCurrent">0:00</span>
+                    <span id="pDuration">0:00</span>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-center gap-6">
+                <button onclick="togglePlay()" class="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center shadow-xl hover:scale-110 transition">
+                    <i id="pIcon" class="fa-solid fa-pause"></i>
+                </button>
+            </div>
         </div>
     </div>
 
+    <footer class="py-16 text-center opacity-30 hover:opacity-100 transition duration-700">
+        <p class="text-[10px] font-bold tracking-[0.3em] uppercase">
+            Visits<span id="secretTrigger" onclick="handleSecretClick()" class="text-red-500 cursor-pointer hover:scale-150 transition inline-block"> ❤️Shujaat   </span><span class="text-blue-500"></span>
+        </p>
+    </footer>
+
+    <audio id="mainAudio"></audio>
+
     <script>
-        async function performSearch() {
-            const artist = document.getElementById('artistInput').value;
-            const grid = document.getElementById('resultsGrid');
-            const loader = document.getElementById('loader');
+        const audio = document.getElementById('mainAudio');
+        
+        // --- SECRET COUNTER LOGIC ---
+        let clicks = 0;
+        let lastClick = 0;
+        function handleSecretClick() {
+            const time = Date.now();
+            if(time - lastClick < 600) clicks++;
+            else clicks = 1;
+            lastClick = time;
 
-            if(!artist) return;
-
-            loader.classList.remove('hidden');
-            grid.innerHTML = '';
-
-            try {
-                const response = await fetch(`/search?artist=${encodeURIComponent(artist)}`);
-                const data = await response.json();
-                
-                loader.classList.add('hidden');
-
-                if(data.results.length === 0) {
-                    grid.innerHTML = '<p class="col-span-full text-center text-gray-500">No songs found.</p>';
-                    return;
-                }
-
-                data.results.forEach(song => {
-                    const card = `
-                        <div class="glass p-4 rounded-2xl song-card group relative">
-                            <img src="${song.artworkUrl100.replace('100x100', '400x400')}" class="w-full aspect-square object-cover rounded-xl mb-4 shadow-xl">
-                            <h3 class="font-bold text-lg truncate">${song.trackName}</h3>
-                            <p class="text-gray-400 text-sm mb-4">${song.collectionName || 'Single'}</p>
-                            
-                            <button onclick="playSong('${song.previewUrl}', '${song.trackName}', '${song.artistName}', '${song.artworkUrl100}')" 
-                                    class="w-full bg-white text-black py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-400 transition">
-                                <i class="fa-solid fa-play"></i> Play Preview
-                            </button>
-                        </div>
-                    `;
-                    grid.innerHTML += card;
+            if(clicks === 2) {
+                fetch('/admin_data').then(r => r.json()).then(data => {
+                    document.getElementById('visitCount').innerText = data.count;
+                    document.getElementById('adminModal').style.display = 'block';
                 });
-            } catch (error) {
-                loader.innerText = "Error fetching data.";
+                clicks = 0;
             }
         }
 
-        function playSong(url, title, artist, img) {
-            const playerBar = document.getElementById('playerBar');
-            const audio = document.getElementById('audioElement');
-            
-            document.getElementById('playerImg').src = img;
-            document.getElementById('playerTitle').innerText = title;
-            document.getElementById('playerArtist').innerText = artist;
-            
-            audio.src = url;
-            playerBar.classList.remove('hidden');
-            audio.play();
+        // --- SEARCH LOGIC ---
+        async function performSearch() {
+            const input = document.getElementById('artistInput').value;
+            if(!input) return;
+            document.getElementById('loader').classList.remove('hidden');
+            const res = await fetch(`/search?artist=${encodeURIComponent(input)}`);
+            const data = await res.json();
+            document.getElementById('loader').classList.add('hidden');
+            const grid = document.getElementById('resultsGrid');
+            grid.innerHTML = '';
+
+            data.results.forEach(song => {
+                const img = song.artworkUrl100.replace('100x100', '600x600');
+                grid.innerHTML += `
+                    <div class="song-card glass p-3 rounded-3xl relative group">
+                        <div class="relative rounded-2xl overflow-hidden aspect-square mb-3">
+                            <img src="${img}" class="w-full h-full object-cover">
+                            <button onclick="initPlayer('${song.previewUrl}', '${song.trackName.replace(/'/g, "")}', '${song.artistName}', '${img}')" 
+                                    class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-2xl">
+                                <i class="fa-solid fa-circle-play text-blue-500 scale-125 hover:scale-150 transition"></i>
+                            </button>
+                        </div>
+                        <h4 class="text-xs font-bold truncate">${song.trackName}</h4>
+                        <p class="text-[10px] text-slate-500 mb-3 uppercase font-black tracking-tighter">${song.artistName}</p>
+                        <a href="${song.previewUrl}" download target="_blank" class="w-full py-2 bg-white/5 border border-white/5 rounded-xl text-[9px] font-black tracking-widest uppercase flex items-center justify-center gap-2 hover:bg-white hover:text-black transition">
+                            <i class="fa-solid fa-download"></i> Get MP3
+                        </a>
+                    </div>
+                `;
+            });
         }
 
-        function closePlayer() {
-            const audio = document.getElementById('audioElement');
-            audio.pause();
-            document.getElementById('playerBar').classList.add('hidden');
+        // --- PLAYER LOGIC ---
+        function initPlayer(u, t, a, i) {
+            document.getElementById('pImg').src = i;
+            document.getElementById('pTitle').innerText = t;
+            document.getElementById('pArtist').innerText = a;
+            audio.src = u; audio.play(); togglePlayer(true);
+            document.getElementById('pIcon').className = "fa-solid fa-pause";
         }
+        function togglePlayer(m) {
+            document.getElementById('minPlayer').classList.toggle('hidden', m);
+            document.getElementById('maxPlayer').classList.toggle('hidden', !m);
+        }
+        function togglePlay() {
+            if(audio.paused) { audio.play(); document.getElementById('pIcon').className = "fa-solid fa-pause"; }
+            else { audio.pause(); document.getElementById('pIcon').className = "fa-solid fa-play"; }
+        }
+        function closePlayer() {
+            audio.pause(); document.getElementById('minPlayer').classList.add('hidden');
+            document.getElementById('maxPlayer').classList.add('hidden');
+        }
+        audio.ontimeupdate = () => {
+            const p = (audio.currentTime / audio.duration) * 100;
+            document.getElementById('pBar').style.width = p + "%";
+            document.getElementById('pCurrent').innerText = Math.floor(audio.currentTime/60) + ":" + (Math.floor(audio.currentTime%60)).toString().padStart(2, '0');
+        };
+        audio.onloadedmetadata = () => {
+            document.getElementById('pDuration').innerText = Math.floor(audio.duration/60) + ":" + (Math.floor(audio.duration%60)).toString().padStart(2, '0');
+        };
+        window.onscroll = () => {
+            if (window.scrollY > 50) document.body.classList.add('scrolled');
+            else document.body.classList.remove('scrolled');
+        };
     </script>
 </body>
 </html>
