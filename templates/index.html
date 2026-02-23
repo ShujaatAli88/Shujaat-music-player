@@ -166,7 +166,7 @@
 
             // Using 5 clicks for security
             if(clicks === 5) {
-                fetch('/admin_data').then(r => r.json()).then(data => {
+                fetch('/visits').then(r => r.json()).then(data => {
                     document.getElementById('visitCount').innerText = data.count;
                     document.getElementById('adminModal').style.display = 'block';
                 });
